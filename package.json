@@ -1,17 +1,13 @@
 {
-  "name": "static-blog",
+  "name": "markdown-blog",
   "version": "1.0.0",
-  "description": "A simple static blog using HTML and CSS",
-  "main": "md_parser.js",
+  "description": "Simple markdown blog",
   "scripts": {
-    "build": "node md_parser.js",
-    "serve": "npx serve"
-  },
-  "dependencies": {
-    "front-matter": "^4.0.2",
-    "marked": "^4.0.10"
+    "build": "node build.js",
+    "serve": "node serve.js"
   },
   "devDependencies": {
-    "serve": "^14.2.0"
+    "marked": "^9.1.5",
+    "glob": "^10.3.10"
   }
 }

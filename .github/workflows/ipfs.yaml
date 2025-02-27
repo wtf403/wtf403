@@ -1,0 +1,117 @@
+name: wtf403.eth
+
+on:
+  workflow_call:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-to-ipfs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Install IPFS Cluster tools
+        run: |
+          wget https://dist.ipfs.tech/ipfs-cluster-ctl/v1.0.6/ipfs-cluster-ctl_v1.0.6_linux-amd64.tar.gz
+          tar -xzf ipfs-cluster-ctl_v1.0.6_linux-amd64.tar.gz
+          sudo mv ipfs-cluster-ctl/ipfs-cluster-ctl /usr/local/bin/
+          rm -rf ipfs-cluster-ctl*
+
+      - name: Deploy to IPFS Cluster
+        id: ipfs-deploy
+        shell: bash
+        env:
+          NODES_JSON: ${{ secrets.NODES }}
+          ENS_DOMAIN: "wtf403.eth"
+          CLUSTER_USER: ${{ secrets.CLUSTER_USER }}
+          CLUSTER_PASSWORD: ${{ secrets.CLUSTER_PASSWORD }}
+        run: |
+          # Parse the JSON object of nodes
+          echo "$NODES_JSON" > nodes.json
+
+          # Create a deployment directory
+          mkdir -p deploy
+          cp -r ./* deploy/
+
+          # Get current timestamp for versioning
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+
+          # Choose a primary node for cluster operations (using us1)
+          PRIMARY_NODE=$(jq -r '.us1' nodes.json)
+          echo "Using primary node: $PRIMARY_NODE"
+
+          # Add all hosts to known_hosts
+          for NODE_NAME in $(jq -r 'keys[]' nodes.json); do
+            NODE_HOST=$(jq -r --arg name "$NODE_NAME" '.[$name]' nodes.json | cut -d@ -f2)
+            ssh-keyscan -t rsa $NODE_HOST >> ~/.ssh/known_hosts
+          done
+
+          # Create remote directory on primary node
+          ssh $PRIMARY_NODE "mkdir -p /tmp/ipfs-deploy-$TIMESTAMP"
+
+          # Copy files to the primary server
+          scp -r deploy/* $PRIMARY_NODE:/tmp/ipfs-deploy-$TIMESTAMP/
+
+          # Add to IPFS cluster and get the hash
+          # Using the primary node to connect to the cluster
+          IPFS_HASH=$(ssh $PRIMARY_NODE "cd /tmp/ipfs-deploy-$TIMESTAMP && ipfs-cluster-ctl --basic-auth=${CLUSTER_USER}:${CLUSTER_PASSWORD} add -r --quieter .")
+
+          # Update ENS record to point to the new IPFS hash
+          # Choose a node for ENS publishing (using us1)
+          ENS_NODE=$(jq -r '.us1' nodes.json)
+          ssh $ENS_NODE "ipfs name publish --key=wtf403 /ipfs/$IPFS_HASH"
+
+          # Clean up
+          ssh $PRIMARY_NODE "rm -rf /tmp/ipfs-deploy-$TIMESTAMP"
+
+          # Set output variables
+          echo "IPFS_HASH=$IPFS_HASH" >> $GITHUB_ENV
+          echo "IPFS_URL=https://ipfs.io/ipfs/$IPFS_HASH" >> $GITHUB_ENV
+          echo "ENS_URL=https://$ENS_DOMAIN.limo" >> $GITHUB_ENV
+
+          # Output node status
+          echo "IPFS Cluster status:"
+          ssh $PRIMARY_NODE "ipfs-cluster-ctl --basic-auth=${CLUSTER_USER}:${CLUSTER_PASSWORD} pin ls $IPFS_HASH"
+
+      - name: Comment IPFS URL on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `🚀 Site deployed to IPFS Cluster!\n\nIPFS Hash: \`${{ env.IPFS_HASH }}\`\nIPFS Gateway URL: ${{ env.IPFS_URL }}\nENS URL: ${{ env.ENS_URL }}`
+            })
+
+      - name: Output IPFS URL
+        run: |
+          echo "Site deployed to IPFS Cluster"
+          echo "IPFS Hash: ${{ env.IPFS_HASH }}"
+          echo "IPFS Gateway URL: ${{ env.IPFS_URL }}"
+          echo "ENS URL: ${{ env.ENS_URL }}"

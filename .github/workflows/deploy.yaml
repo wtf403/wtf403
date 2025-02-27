@@ -1,0 +1,75 @@
+name: Deploy
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  # Check if all tasks in PR are completed
+  task-check:
+    name: Check PR Tasks
+    runs-on: ubuntu-latest
+    outputs:
+      tasks-completed: ${{ steps.check-tasks.outputs.isCompleted }}
+    steps:
+      - name: Check if all tasks are completed
+        id: check-tasks
+        uses: kentaro-m/task-completed-checker-action@v0.1.2
+        with:
+          repo-token: "${{ secrets.GITHUB_TOKEN }}"
+
+  # Check for broken links in markdown files
+  link-checker:
+    name: Check Links
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check links
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: --max-concurrency 1 -v articles/*.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Deploy to GitHub Pages if all tasks are completed
+  deploy-gh-pages:
+    name: Deploy to GitHub Pages
+    needs: [task-check, link-checker]
+    if: needs.task-check.outputs.tasks-completed == 'true'
+    uses: ./.github/workflows/gh-pages.yaml
+    secrets: inherit
+
+  # Deploy to IPFS if all tasks are completed
+  deploy-ipfs:
+    name: Deploy to IPFS
+    needs: [task-check, link-checker]
+    if: needs.task-check.outputs.tasks-completed == 'true'
+    uses: ./.github/workflows/ipfs.yaml
+    secrets: inherit
+
+  # Comment on PR if tasks are not completed
+  comment-on-pr:
+    name: Comment on PR
+    needs: [task-check]
+    if: needs.task-check.outputs.tasks-completed != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comment on PR
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '⚠️ Please complete all required tasks in the PR description before deployment can proceed:\n\n```\nUpdate article:\n- [ ] mirror.xyz\n- [ ] substack\n- [ ] medium\n```'
+            })
