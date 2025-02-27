@@ -1,0 +1,17 @@
+{
+  "name": "static-blog",
+  "version": "1.0.0",
+  "description": "A simple static blog using HTML and CSS",
+  "main": "md_parser.js",
+  "scripts": {
+    "build": "node md_parser.js",
+    "serve": "npx serve"
+  },
+  "dependencies": {
+    "front-matter": "^4.0.2",
+    "marked": "^4.0.10"
+  },
+  "devDependencies": {
+    "serve": "^14.2.0"
+  }
+}
