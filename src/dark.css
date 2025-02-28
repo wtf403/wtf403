@@ -1,0 +1,16 @@
+/* Dark theme */
+:root {
+  --bg-color: #1a1c20;
+  --text-color: #ccc;
+  --heading-color: #fff;
+  --link-color: #fff;
+  --link-hover-color: #fff;
+  --link-hover-bg: #000;
+  --border-color: rgba(95, 95, 95, 0.78);
+  --code-bg: #2d2d2d;
+  --blockquote-bg: #252525;
+  --blockquote-border: #444;
+  --tag-bg: #333;
+  --tag-color: #ccc;
+  --header-bg: #1a1c20;
+}

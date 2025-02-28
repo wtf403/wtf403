@@ -4,10 +4,16 @@
   "description": "Simple markdown blog",
   "scripts": {
     "build": "node build.js",
-    "serve": "node serve.js"
+    "dev": "node dev.js"
   },
   "devDependencies": {
+    "browser-sync": "^3.0.3",
+    "cssnano": "^7.0.6",
+    "front-matter": "^4.0.2",
+    "glob": "^10.3.10",
     "marked": "^9.1.5",
-    "glob": "^10.3.10"
+    "postcss": "^8.5.3",
+    "postcss-cli": "^11.0.0",
+    "postcss-nested": "^7.0.2"
   }
 }
