@@ -4,31 +4,20 @@ const { execSync } = require("child_process");
 const chokidar = require("chokidar");
 const browserSync = require("browser-sync").create();
 
-// MIME types for different file extensions
-const MIME_TYPES = {
-  ".html": "text/html",
-  ".css": "text/css",
-  ".js": "text/javascript",
-  ".json": "application/json",
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".gif": "image/gif",
-  ".svg": "image/svg+xml",
-  ".ico": "image/x-icon",
-  ".xml": "application/xml",
-};
-
 // Initial build
 console.log("Building site...");
-execSync("node build.js", { stdio: "inherit" });
+execSync("node scripts/build.js", { stdio: "inherit" });
 
 // Function to handle CSS processing
 function processCssFiles() {
   console.log("Processing CSS files...");
   try {
-    execSync("npx postcss src/style.css -o dist/style.css", { stdio: "inherit" });
-    execSync("npx postcss src/light.css -o dist/light.css", { stdio: "inherit" });
+    execSync("npx postcss src/style.css -o dist/style.css", {
+      stdio: "inherit",
+    });
+    execSync("npx postcss src/light.css -o dist/light.css", {
+      stdio: "inherit",
+    });
     execSync("npx postcss src/dark.css -o dist/dark.css", { stdio: "inherit" });
     console.log("CSS processing complete");
     return true;

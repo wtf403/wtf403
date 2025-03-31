@@ -1,10 +1,10 @@
 {
-  "name": "markdown-blog",
+  "name": "wtf403.xyz",
   "version": "1.0.0",
-  "description": "Simple markdown blog",
+  "description": "wtf403.xyz",
   "scripts": {
-    "build": "node build.js",
-    "dev": "node dev.js"
+    "build": "node scripts/build.js",
+    "dev": "node scripts/dev.js"
   },
   "devDependencies": {
     "browser-sync": "^3.0.3",

@@ -5,7 +5,6 @@ const { marked } = require("marked");
 const frontMatter = require("front-matter");
 const { execSync } = require("child_process");
 
-// Configure marked with syntax highlighting
 marked.setOptions({
   gfm: true,
   breaks: true,
@@ -14,7 +13,6 @@ marked.setOptions({
   smartypants: false,
 });
 
-// Patch the default renderer's code method to insert the data-lang attribute without enabling a custom renderer.
 const originalCode = marked.Renderer.prototype.code;
 marked.Renderer.prototype.code = function (code, language, escaped) {
   let html = originalCode.call(this, code, language, escaped);
@@ -39,6 +37,13 @@ if (!fs.existsSync("dist/media")) {
   fs.mkdirSync("dist/media");
 }
 
+const srcFiles = fs.readdirSync("src");
+for (const file of srcFiles) {
+  if (file !== "index.html") {
+    fs.copyFileSync(path.join("src", file), path.join("dist", file));
+  }
+}
+
 if (fs.existsSync("media")) {
   const mediaFiles = fs.readdirSync("media");
   for (const file of mediaFiles) {
@@ -50,7 +55,6 @@ try {
   execSync("npx postcss src/style.css -o dist/style.css", { stdio: "inherit" });
   execSync("npx postcss src/light.css -o dist/light.css", { stdio: "inherit" });
   execSync("npx postcss src/dark.css -o dist/dark.css", { stdio: "inherit" });
-  fs.copyFileSync("src/404.html", "dist/404.html");
 } catch (error) {
   console.error("Error processing CSS:", error);
 }
@@ -190,7 +194,7 @@ async function buildSite() {
 <channel>
 <title>wtf403.xyz</title>
 <link>https://wtf403.xyz/</link>
-<description>Blockchain articles and thoughts</description>
+<description>wtf403 blog</description>
 <atom:link href="https://wtf403.xyz/feed.xml" rel="self" type="application/rss+xml"/>
 <language>en-us</language>`;
 
@@ -205,7 +209,6 @@ async function buildSite() {
       .replace(/'/g, "&apos;");
   };
 
-  // Articles are already sorted by date at this point
   for (const article of articles) {
     const pubDate = new Date(article.date).toUTCString();
     const articleUrl = `https://wtf403.xyz/${article.path}`;
