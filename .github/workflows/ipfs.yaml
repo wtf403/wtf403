@@ -1,4 +1,4 @@
-name: wtf403.eth
+name: ipfs.yaml
 
 on:
   workflow_call:
