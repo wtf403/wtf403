@@ -2,6 +2,8 @@ name: check-tasks.yaml
 
 on:
   workflow_call:
+  pull_request:
+    types: [edited, opened]
   issue_comment:
     types: [created, edited]
 
