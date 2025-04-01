@@ -4,11 +4,15 @@ if ! command -v jq >/dev/null 2>&1; then
     apt-get update && apt-get install -y jq
 fi
 
-CLUSTER_SECRET=88d132dd48a118256d14460a7fc707688dc76bd371f20598720289d1a909e354
-CLUSTER_ID=12D3KooWJZJqRVhFeu15C7JqtaoC4m5R7nk1rNnZVybkQUwk7ktQ
-BOOTSTRAP_SERVER=176.124.205.58
 IPFS_VERSION="v0.34.1"
 CLUSTER_VERSION="v1.1.2"
+BOOTSTRAP_SERVER=
+CLUSTER_USER=
+CLUSTER_PASSWORD=
+
+# FOR REGULAR (NOT BOOTSTRAP) NODE:
+CLUSTER_SECRET=
+CLUSTER_ID=
 
 MULTIADDR="/ip4/${BOOTSTRAP_SERVER}/tcp/9096/p2p/${CLUSTER_ID}"
 
@@ -138,7 +142,7 @@ EOF
 if [ ! -d ~/.ipfs-cluster ]; then
     ipfs-cluster-service init -f
     if [ "$IS_BOOTSTRAP" = false ]; then
-        # Update the bootstrap configuration and ensure discovery is enabled
+        # Regular Node
         jq --arg addr "$MULTIADDR" --arg secret "$CLUSTER_SECRET" '
             .cluster.bootstrap = [$addr] |
             .cluster.secret = $secret |
@@ -152,8 +156,13 @@ if [ ! -d ~/.ipfs-cluster ]; then
             .ipfs.proxy_listen_multiaddress = "/ip4/0.0.0.0/tcp/9095"
         ' ~/.ipfs-cluster/service.json > ~/.ipfs-cluster/service.json.tmp
         mv ~/.ipfs-cluster/service.json.tmp ~/.ipfs-cluster/service.json
+
+        jq --arg user "$CLUSTER_USER" --arg pass "$CLUSTER_PASSWORD" \
+          '.api.restapi.basic_auth_credentials = {($user): $pass}' \
+          ~/.ipfs-cluster/service.json > ~/.ipfs-cluster/service.json.tmp
+        mv ~/.ipfs-cluster/service.json.tmp ~/.ipfs-cluster/service.json
     else
-        # For bootstrap node, configure for accepting connections
+        # Bootstrap Node
         jq '
             .cluster.bootstrap = [] |
             .cluster.disable_repinning = false |
@@ -165,6 +174,11 @@ if [ ! -d ~/.ipfs-cluster ]; then
             .api.restapi.http_listen_multiaddress = "/ip4/0.0.0.0/tcp/9094" |
             .ipfs.proxy_listen_multiaddress = "/ip4/0.0.0.0/tcp/9095"
         ' ~/.ipfs-cluster/service.json > ~/.ipfs-cluster/service.json.tmp
+        mv ~/.ipfs-cluster/service.json.tmp ~/.ipfs-cluster/service.json
+
+        jq --arg user "$CLUSTER_USER" --arg pass "$CLUSTER_PASSWORD" \
+          '.api.restapi.basic_auth_credentials = {($user): $pass}' \
+          ~/.ipfs-cluster/service.json > ~/.ipfs-cluster/service.json.tmp
         mv ~/.ipfs-cluster/service.json.tmp ~/.ipfs-cluster/service.json
     fi
 fi
@@ -215,12 +229,15 @@ if [ "$IS_BOOTSTRAP" = true ]; then
     echo "CLUSTER_SECRET=${CLUSTER_SECRET}"
     echo "CLUSTER_ID=$(grep -o '"id": "[^"]*' ~/.ipfs-cluster/identity.json | cut -d'"' -f4)"
     echo "BOOTSTRAP_SERVER=${BOOTSTRAP_SERVER}"
+    # Output cluster connection details
+    echo "CLUSTER_MULTIADDR=${MULTIADDR}"
+    echo "CLUSTER_USER=${CLUSTER_USER}"
+    echo "CLUSTER_PASSWORD=${CLUSTER_PASSWORD}"
 fi
 
 echo "============================================"
 
 # Cleanup
-
 rm -rf /tmp/kubo
 rm -rf /tmp/ipfs-cluster-service
 rm -rf /tmp/ipfs-cluster-ctl

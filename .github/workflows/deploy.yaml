@@ -5,29 +5,27 @@ on:
     types: [opened, reopened, synchronize]
     branches:
       - main
-  push:
-    branches:
-      - main
 
 permissions:
   pages: write
   id-token: write
   contents: read
   pull-requests: write
+  statuses: write
 
 jobs:
   # # Check if all tasks in PR are completed
-  # task-check:
-  #   name: Check PR Tasks
-  #   runs-on: ubuntu-latest
-  #   outputs:
-  #     tasks-completed: ${{ steps.check-tasks.outputs.isCompleted }}
-  #   steps:
-  #     - name: Check if all tasks are completed
-  #       id: check-tasks
-  #       uses: kentaro-m/task-completed-checker-action@v0.1.2
-  #       with:
-  #         repo-token: "${{ secrets.GITHUB_TOKEN }}"
+  task-check:
+    name: Check PR Tasks
+    runs-on: ubuntu-latest
+    outputs:
+      tasks-completed: ${{ steps.check-tasks.outputs.isCompleted }}
+    steps:
+      - name: Check if all tasks are completed
+        id: check-tasks
+        uses: kentaro-m/task-completed-checker-action@v0.1.2
+        with:
+          repo-token: "${{ secrets.GITHUB_TOKEN }}"
 
   # Check for broken links in markdown files
   link-checker:
@@ -45,29 +43,29 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # Comment on PR if tasks are not completed
-  # require-tasks:
-  #   name: Require Tasks
-  #   needs: [task-check]
-  #   if: needs.task-check.outputs.tasks-completed != 'true'
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Require Tasks
-  #       uses: actions/github-script@v6
-  #       with:
-  #         github-token: ${{ secrets.GITHUB_TOKEN }}
-  #         script: |
-  #           github.rest.issues.createComment({
-  #             issue_number: context.issue.number,
-  #             owner: context.repo.owner,
-  #             repo: context.repo.repo,
-  #             body: '⚠️ Please complete all required tasks in the PR description before deployment can proceed:\n\n```\nUpdate article:\n- [ ] mirror.xyz\n- [ ] substack\n- [ ] medium\n```'
-  #           })
+  require-tasks:
+    name: Require Tasks
+    needs: [task-check]
+    if: needs.task-check.outputs.tasks-completed != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require Tasks
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '⚠️ Please complete all required tasks in the PR description before deployment can proceed:\n\n```\nUpdate article:\n- [ ] mirror.xyz\n- [ ] paragraph.xyz [ ] medium.com\n```'
+            })
 
   # Deploy to GitHub Pages if all tasks are completed
   deploy-gh-pages:
     name: Deploy to GitHub Pages
     needs: [link-checker]
-    # if: needs.require-tasks.outputs.tasks-completed == 'true'
+    if: needs.require-tasks.outputs.tasks-completed == 'true'
     uses: ./.github/workflows/gh-pages.yaml
     secrets: inherit
 
@@ -75,6 +73,6 @@ jobs:
   deploy-ipfs:
     name: Deploy to IPFS
     needs: [link-checker]
-    # if: needs.require-tasks.outputs.tasks-completed == 'true'
+    if: needs.require-tasks.outputs.tasks-completed == 'true'
     uses: ./.github/workflows/ipfs.yaml
     secrets: inherit

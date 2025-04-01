@@ -1,5 +1,5 @@
 # Article updates
 
 - [ ] mirror.xyz
-- [ ] substack
-- [ ] medium
+- [ ] paragraph.xyz
+- [ ] medium.com
