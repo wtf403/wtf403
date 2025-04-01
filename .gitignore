@@ -1,3 +1,4 @@
 articles/.*
 node_modules
 dist
+ipfs.up.sh

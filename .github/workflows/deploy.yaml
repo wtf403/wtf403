@@ -14,6 +14,7 @@ permissions:
   id-token: write
   contents: read
   pull-requests: write
+  statuses: write
 
 jobs:
   # # Check if all tasks in PR are completed
@@ -60,7 +61,7 @@ jobs:
   #             issue_number: context.issue.number,
   #             owner: context.repo.owner,
   #             repo: context.repo.repo,
-  #             body: '⚠️ Please complete all required tasks in the PR description before deployment can proceed:\n\n```\nUpdate article:\n- [ ] mirror.xyz\n- [ ] substack\n- [ ] medium\n```'
+  #             body: '⚠️ Please complete all required tasks in the PR description before deployment can proceed:\n\n```\nUpdate article:\n- [ ] mirror.xyz\n- [ ] paragraph.xyz [ ] medium.com\n```'
   #           })
 
   # Deploy to GitHub Pages if all tasks are completed
