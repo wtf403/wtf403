@@ -19,17 +19,30 @@ jobs:
     name: Check PR Tasks
     runs-on: ubuntu-latest
     outputs:
-      tasks-completed: ${{ steps.check-tasks.outputs.isCompleted }}
+      tasks-completed: ${{ steps.check-tasks.outputs.result }}
     steps:
-      - name: Check if all tasks are completed
+      - name: Check PR Tasks
         id: check-tasks
-        uses: kentaro-m/task-completed-checker-action@v0.1.2
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+
+            const body = pr.body || '';
+            const incompleteTaskPattern = /\s*[-*]\s*\[\s*]\s/;
+            const hasIncompleteTasks = incompleteTaskPattern.test(body);
+
+            return (!hasIncompleteTasks).toString();
 
   # Comment on PR if tasks are not completed
   require-tasks:
     name: Require Tasks
     needs: [task-check]
-    if: needs.task-check.outputs.tasks-completed != 'true'
+    if: needs.task-check.outputs.tasks-completed == 'false'
     runs-on: ubuntu-latest
     steps:
       - name: Require Tasks
@@ -41,7 +54,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '⚠️ Please complete all required tasks in the PR description before deployment can proceed:\n\n```\nUpdate article:\n- [ ] mirror.xyz\n- [ ] paragraph.xyz [ ] medium.com\n```'
+              body: '⚠️ Please complete all required tasks in the PR description'
             })
 
   # Check for broken links in markdown files
