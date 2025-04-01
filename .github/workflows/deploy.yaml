@@ -16,28 +16,11 @@ permissions:
   statuses: write
 
 jobs:
-  # Check if all tasks in PR are completed
-  task-check:
-    name: Check PR Tasks
-    needs: [link-checker]
-    uses: ./.github/workflows/check-tasks.yaml
-    secrets: inherit
-
-  # Check for broken links in markdown files
-  link-checker:
+  # Check for links in markdown files
+  check-links:
     name: Check Links
-    needs: [task-check]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Check links
-        uses: lycheeverse/lychee-action@v2
-        with:
-          args: --max-concurrency 1 -v articles/*.md
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    uses: ./.github/workflows/links.yaml
+    secrets: inherit
 
   # Deploy to GitHub Pages if all tasks are completed
   deploy-gh-pages:
