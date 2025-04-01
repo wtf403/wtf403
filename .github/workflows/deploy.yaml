@@ -2,11 +2,9 @@ name: deploy.yaml
 
 on:
   pull_request:
-    types: [opened, reopened, synchronize]
+    types: [opened, reopened, edited]
     branches:
       - main
-  pull_request_comment:
-    types: [edited]
 
 permissions:
   pages: write
