@@ -173,6 +173,19 @@ main {
 }
 
 article {
+  & .image-wrapper {
+    display: flex;
+    justify-content: center;
+    margin: 1.5em 0;
+
+    & img {
+      margin: 0;
+      max-width: 100%;
+      height: auto;
+      border-radius: 4px;
+    }
+  }
+
   & h2 {
     margin-top: 0;
     margin-bottom: 0.5em;
@@ -279,6 +292,49 @@ article {
     font-style: italic;
     &::before {
       content: "— ";
+    }
+  }
+}
+
+.cover-image {
+  width: 100%;
+
+  & img {
+    width: 100%;
+    height: auto;
+    border-radius: 4px;
+    object-fit: cover;
+    margin-bottom: 0.5em;
+  }
+}
+
+.read-on {
+  margin-bottom: 2em;
+
+  & .platform-links {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1em;
+
+    & a {
+      display: flex;
+      align-items: center;
+      gap: 0.5em;
+      padding: 0.5em;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      transition: all 0.2s ease;
+
+      &:hover {
+        transform: translateY(-2px);
+        border-color: var(--link-color);
+      }
+
+      & img {
+        width: 24px;
+        height: 24px;
+        margin: 0;
+      }
     }
   }
 }

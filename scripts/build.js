@@ -13,6 +13,19 @@ marked.setOptions({
   smartypants: false,
 });
 
+const originalImage = marked.Renderer.prototype.image;
+marked.Renderer.prototype.image = function (href, title, text) {
+  // Check for width annotation
+  const widthMatch = href.match(/^(.+?)\|(\d+)$/);
+  const imageUrl = widthMatch ? widthMatch[1] : href;
+  const width = widthMatch ? widthMatch[2] : null;
+
+  const img = `<img src="${imageUrl}" alt="${text}"${
+    title ? ` title="${title}"` : ""
+  }${width ? ` style="width: ${width}px;"` : ""}>`;
+  return `<div class="image-wrapper">${img}</div>`;
+};
+
 const originalCode = marked.Renderer.prototype.code;
 marked.Renderer.prototype.code = function (code, language, escaped) {
   let html = originalCode.call(this, code, language, escaped);
@@ -27,6 +40,25 @@ function estimateReadingTime(text) {
   const words = text.trim().split(/\s+/).length;
   const minutes = Math.ceil(words / wordsPerMinute);
   return minutes;
+}
+
+function copyDirRecursive(src, dest) {
+  if (!fs.existsSync(dest)) {
+    fs.mkdirSync(dest, { recursive: true });
+  }
+
+  const entries = fs.readdirSync(src, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const srcPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
+
+    if (entry.isDirectory()) {
+      copyDirRecursive(srcPath, destPath);
+    } else {
+      fs.copyFileSync(srcPath, destPath);
+    }
+  }
 }
 
 if (!fs.existsSync("dist")) {
@@ -45,10 +77,7 @@ for (const file of srcFiles) {
 }
 
 if (fs.existsSync("media")) {
-  const mediaFiles = fs.readdirSync("media");
-  for (const file of mediaFiles) {
-    fs.copyFileSync(path.join("media", file), path.join("dist/media", file));
-  }
+  copyDirRecursive("media", "dist/media");
 }
 
 try {
@@ -73,6 +102,55 @@ const clockIcon =
   '<circle cx="16" cy="16" r="14"></circle><path d="M16 8 L16 16 20 20"></path>';
 const editIcon =
   '<path d="M30 7 L25 2 5 22 3 29 10 27 Z M21 6 L26 11 Z M5 22 L10 27 Z"></path>';
+
+const platformData = {
+  mirror: {
+    name: "Mirror",
+    logo: "/media/platforms/mirror.png",
+  },
+  paragraph: {
+    name: "Paragraph",
+    logo: "/media/platforms/paragraph.png",
+  },
+  medium: {
+    name: "Medium",
+    logo: "/media/platforms/medium.png",
+  },
+};
+
+function generatePlatformLinks(attributes) {
+  const platforms = Object.keys(platformData).filter(
+    (platform) => attributes[platform]
+  );
+  if (platforms.length === 0) return "";
+
+  return `
+    <section class="read-on">
+      <div class="platform-links">
+        ${platforms
+          .map(
+            (platform) => `
+          <a href="${attributes[platform]}" target="_blank" rel="noopener noreferrer">
+            <img src="${platformData[platform].logo}" alt="${platformData[platform].name} logo" />
+            ${platformData[platform].name}
+          </a>
+        `
+          )
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
+function generateCoverImage(attributes) {
+  if (!attributes.cover) return "";
+
+  return `
+    <div class="cover-image">
+      <img height="720" src="${attributes.cover}" alt="Article cover image" />
+    </div>
+  `;
+}
 
 async function buildSite() {
   const markdownFiles = await glob("articles/*.md");
@@ -133,14 +211,18 @@ async function buildSite() {
         /<main.*?>([\s\S]*?)<\/main>/,
         `<main>
           <article>
-            <header>
+            <div>
               ${htmlAbstract ? htmlAbstract : ""}
               <div class="stats">
                 ${createStatComponent(clockIcon, `${readingTime} minute read`)}
                 ${createStatComponent(editIcon, `Published: ${formattedDate}`)}
               </div>
-            </header>
-            <div>${htmlContent}</div>
+            </div>
+            <div>
+              ${generateCoverImage(attributes)}
+              ${generatePlatformLinks(attributes)}
+              ${htmlContent}
+            </div>
           </article>
         </main>`
       );
@@ -191,12 +273,12 @@ async function buildSite() {
   fs.writeFileSync("dist/index.html", indexHtml);
 
   let rssContent = `<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0" >
-<channel>
-<title>wtf403.xyz</title>
-<link>https://wtf403.xyz/</link>
-<description>wtf403 blog</description>
-<atom:link href="https://wtf403.xyz/feed.xml" rel="self" type="application/rss+xml"/>
-<language>en-us</language>`;
+  <channel>
+  <title>wtf403.xyz</title>
+  <link>https://wtf403.xyz/</link>
+  <description>wtf403 blog</description>
+  <atom:link href="https://wtf403.xyz/feed.xml" rel="self" type="application/rss+xml"/>
+  <language>en-us</language>`;
 
   // Function to escape XML special characters
   const escapeXml = (unsafe) => {
@@ -214,18 +296,18 @@ async function buildSite() {
     const articleUrl = `https://wtf403.xyz/${article.path}`;
 
     rssContent += `
-<item>
-<title>${escapeXml(article.title)}</title>
-<link>${articleUrl}</link>
-<guid>${articleUrl}</guid>
-<pubDate>${pubDate}</pubDate>
-<description>${escapeXml(article.abstract || "")}</description>
-</item>`;
+  <item>
+  <title>${escapeXml(article.title)}</title>
+  <link>${articleUrl}</link>
+  <guid>${articleUrl}</guid>
+  <pubDate>${pubDate}</pubDate>
+  <description>${escapeXml(article.abstract || "")}</description>
+  </item>`;
   }
 
   rssContent += `
-</channel>
-</rss>`;
+  </channel>
+  </rss>`;
 
   fs.writeFileSync("dist/feed.xml", rssContent);
 }

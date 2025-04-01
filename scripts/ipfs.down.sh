@@ -21,8 +21,8 @@ rm -rf ~/.ipfs
 rm -rf ~/.ipfs-cluster
 
 # Clean up any temporary files
-rm -f /tmp/kubo_*.tar.gz
-rm -f /tmp/ipfs-cluster-*.tar.gz
+# rm -f /tmp/kubo_*.tar.gz
+# rm -f /tmp/ipfs-cluster-*.tar.gz
 rm -rf /tmp/kubo
 rm -rf /tmp/ipfs-cluster-service
 rm -rf /tmp/ipfs-cluster-ctl
