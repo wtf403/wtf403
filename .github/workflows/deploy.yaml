@@ -1,10 +1,12 @@
 name: deploy.yaml
 
 on:
-  pull_request_target:
-    types: [opened, reopened, synchronize, edited]
+  pull_request:
+    types: [opened, reopened, synchronize]
     branches:
       - main
+  pull_request_comment:
+    types: [edited]
 
 permissions:
   pages: write
@@ -18,31 +20,8 @@ jobs:
   task-check:
     name: Check PR Tasks
     runs-on: ubuntu-latest
-    if: github.event.action != 'edited' || github.event.changes.body
-    steps:
-      - uses: venkatsarvesh/pr-tasks-completed-action@v1.0.0
-        with:
-          repo-token: "${{ secrets.GITHUB_TOKEN }}"
-
-
-  # Comment on PR if tasks are not completed
-  require-tasks:
-    name: Require Tasks
-    needs: [task-check]
-    if: failure() && needs.task-check.result == 'failure'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Require Tasks
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '⚠️ Please complete all required tasks in the PR description before deployment can proceed'
-            })
+    uses: ./.github/workflows/check-tasks.yaml
+    secrets: inherit
 
   # Check for broken links in markdown files
   link-checker:
