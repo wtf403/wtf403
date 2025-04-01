@@ -2,13 +2,13 @@
 date: 02-28-2025
 abstract: It's just the abstract to test things out
 cover: /media/covers/this-is-fine.png #2048x720
-mirror: https://mirror.xyz/
-paragraph: https://paragraph.xyz/
-medium: https://medium.com/
+mirror: https://mirror.xyz
+paragraph: https://paragraph.xyz
+medium: https://medium.com
 ---
 # About test
 
-Test article bla bla bla
+Test article
 
 ## Title
 
