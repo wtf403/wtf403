@@ -10,7 +10,6 @@ on:
 
 jobs:
   task-check:
-    if: (github.event_name == 'pull_request' && github.event.action == 'opened') || (github.event_name == 'issue_comment' && github.event.action == 'edited' && github.event.issue.pull_request != null)
     name: Check PR Tasks
     runs-on: ubuntu-latest
     steps:
