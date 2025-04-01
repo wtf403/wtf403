@@ -19,64 +19,9 @@ jobs:
   # Check if all tasks in PR are completed
   task-check:
     name: Check PR Tasks
-<<<<<<< HEAD
-<<<<<<< HEAD
-    runs-on: ubuntu-latest
-<<<<<<< HEAD
-    if: github.event.action != 'edited' || github.event.changes.body
-    steps:
-      - uses: venkatsarvesh/pr-tasks-completed-action@v1.0.0
-        with:
-          repo-token: "${{ secrets.GITHUB_TOKEN }}"
-
-
-  # Comment on PR if tasks are not completed
-<<<<<<< HEAD
-  require-tasks:
-    name: Require Tasks
-    needs: [task-check]
-    if: failure() && needs.task-check.result == 'failure'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Require Tasks
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '⚠️ Please complete all required tasks in the PR description before deployment can proceed'
-            })
-=======
-  # require-tasks:
-  #   name: Require Tasks
-  #   needs: [task-check]
-  #   if: needs.task-check.outputs.tasks-completed != 'true'
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Require Tasks
-  #       uses: actions/github-script@v6
-  #       with:
-  #         github-token: ${{ secrets.GITHUB_TOKEN }}
-  #         script: |
-  #           github.rest.issues.createComment({
-  #             issue_number: context.issue.number,
-  #             owner: context.repo.owner,
-  #             repo: context.repo.repo,
-  #             body: '⚠️ Please complete all required tasks in the PR description before deployment can proceed:\n\n```\nUpdate article:\n- [ ] mirror.xyz\n- [ ] paragraph.xyz [ ] medium.com\n```'
-  #           })
->>>>>>> d697123 (ipfs deploy)
-=======
-=======
     needs: [link-checker]
->>>>>>> e07de7a (fix action)
-=======
->>>>>>> 4a89c01 (fix gh-action)
     uses: ./.github/workflows/check-tasks.yaml
     secrets: inherit
->>>>>>> f1282e9 (fix action)
 
   # Check for broken links in markdown files
   link-checker:

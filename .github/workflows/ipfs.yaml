@@ -9,20 +9,17 @@ permissions:
   pages: write
   id-token: write
   statuses: write
-<<<<<<< HEAD
-=======
   pull-requests: write
->>>>>>> c21b854 (ipfs deploy)
 
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  jobs:
+    build-and-deploy:
+      runs-on: ubuntu-latest
+      steps:
+        - name: Checkout code
+          uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+        - name: Setup Node.js
+          uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
