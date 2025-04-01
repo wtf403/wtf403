@@ -21,53 +21,86 @@ jobs:
             const fs = require('fs');
             const { execSync } = require('child_process');
 
-            // Get changed files
-            const diffOutput = execSync('git diff --name-only HEAD^').toString();
-            const changedFiles = diffOutput.split('\n').filter(file => file.endsWith('.md'));
+            // Get all changed files in articles directory
+            const diffOutput = execSync('git diff --name-status HEAD^').toString();
+            const changedFiles = diffOutput
+              .split('\n')
+              .filter(line => line.trim())
+              .map(line => {
+                const [status, file] = line.split(/\s+/);
+                return { status, file };
+              })
+              .filter(({ file }) => file && file.startsWith('articles/') && file.endsWith('.md'));
 
             let hasErrors = false;
 
-            for (const file of changedFiles) {
-              const content = fs.readFileSync(file, 'utf8');
-              const lines = content.split('\n');
+            for (const { status, file } of changedFiles) {
+              // Skip deleted files
+              if (status === 'D') continue;
 
-              // Check if article content was modified (excluding front matter)
-              const contentStart = lines.findIndex((line, index) =>
-                index > 0 && line.trim() === '---'
-              );
+              try {
+                const content = fs.readFileSync(file, 'utf8');
+                const lines = content.split('\n');
 
-              const oldContent = execSync(`git show HEAD^:${file}`).toString();
-              const oldLines = oldContent.split('\n');
-              const oldContentStart = oldLines.findIndex((line, index) =>
-                index > 0 && line.trim() === '---'
-              );
+                // Check if article content was modified (excluding front matter)
+                const contentStart = lines.findIndex((line, index) =>
+                  index > 0 && line.trim() === '---'
+                );
 
-              // If content changed, verify front matter links
-              if (lines.slice(contentStart + 1).join('\n') !== oldLines.slice(oldContentStart + 1).join('\n')) {
-                const requiredLinks = {
-                  'mirror': 'https://mirror.xyz/',
-                  'paragraph': 'https://paragraph.xyz/',
-                  'medium': 'https://medium.com/'
-                };
-
-                let frontMatter = lines.slice(0, contentStart);
-                let missingLinks = [];
-
-                for (const [platform, url] of Object.entries(requiredLinks)) {
-                  if (!frontMatter.some(line => line.trim().startsWith(`${platform}:`) && line.includes(url))) {
-                    missingLinks.push(`${platform}: ${url}`);
-                  }
-                }
-
-                if (missingLinks.length > 0) {
+                if (contentStart === -1) {
                   hasErrors = true;
                   await github.rest.issues.createComment({
                     issue_number: context.issue.number,
                     owner: context.repo.owner,
                     repo: context.repo.repo,
-                    body: `⚠️ Article content was modified but the following front matter links are missing or incorrect in ${file}:\n\n${missingLinks.join('\n')}`
+                    body: `⚠️ Invalid front matter format in ${file} - missing closing '---'`
                   });
+                  continue;
                 }
+
+                let oldContent;
+                try {
+                  oldContent = execSync(`git show HEAD^:${file}`).toString();
+                } catch (e) {
+                  // File is new, check all front matter
+                  oldContent = '';
+                }
+
+                const oldLines = oldContent ? oldContent.split('\n') : [];
+                const oldContentStart = oldLines.length ? oldLines.findIndex((line, index) =>
+                  index > 0 && line.trim() === '---'
+                ) : -1;
+
+                // Check front matter if file is new or content changed
+                if (!oldContent || lines.slice(contentStart + 1).join('\n') !== oldLines.slice(oldContentStart + 1).join('\n')) {
+                  const requiredLinks = {
+                    'mirror': 'https://mirror.xyz/',
+                    'paragraph': 'https://paragraph.xyz/',
+                    'medium': 'https://medium.com/'
+                  };
+
+                  let frontMatter = lines.slice(0, contentStart);
+                  let missingLinks = [];
+
+                  for (const [platform, url] of Object.entries(requiredLinks)) {
+                    if (!frontMatter.some(line => line.trim().startsWith(`${platform}:`) && line.includes(url))) {
+                      missingLinks.push(`${platform}: ${url}`);
+                    }
+                  }
+
+                  if (missingLinks.length > 0) {
+                    hasErrors = true;
+                    await github.rest.issues.createComment({
+                      issue_number: context.issue.number,
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      body: `⚠️ Article content was modified but the following front matter links are missing or incorrect in ${file}:\n\n${missingLinks.join('\n')}`
+                    });
+                  }
+                }
+              } catch (error) {
+                console.error(`Error processing ${file}:`, error);
+                hasErrors = true;
               }
             }
 
