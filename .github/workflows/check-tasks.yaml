@@ -1,11 +1,13 @@
 name: check-tasks.yaml
 
 on:
-  pull_request_comment:
-    types: [edited]
+  workflow_call:
+  issue_comment:
+    types: [created, edited]
 
 jobs:
   task-check:
+    if: (github.event_name == 'issue_comment' && github.event.issue.pull_request != null)
     name: Check PR Tasks
     runs-on: ubuntu-latest
     steps:
