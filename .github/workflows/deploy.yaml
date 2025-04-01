@@ -1,8 +1,6 @@
 name: deploy.yaml
 
 on:
-  issue_comment:
-    types: [created, deleted]
   pull_request:
     types: [opened, reopened, synchronize]
     branches:
@@ -19,7 +17,6 @@ jobs:
   # Check if all tasks in PR are completed
   task-check:
     name: Check PR Tasks
-    if: ${{ github.event.issue.pull_request }}
     runs-on: ubuntu-latest
     outputs:
       tasks-completed: ${{ steps.check-tasks.outputs.isCompleted }}
@@ -32,7 +29,7 @@ jobs:
   require-tasks:
     name: Require Tasks
     needs: [task-check]
-    if: needs.task-check.outputs.tasks-completed != 'true' && ${{ github.event.issue.pull_request }}
+    if: needs.task-check.outputs.tasks-completed != 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Require Tasks
@@ -62,7 +59,6 @@ jobs:
           args: --max-concurrency 1 -v articles/*.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
 
   # Deploy to GitHub Pages if all tasks are completed
   deploy-gh-pages:
