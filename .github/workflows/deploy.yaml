@@ -13,6 +13,7 @@ permissions:
   pull-requests: write
   statuses: write
 
+
 jobs:
   # Check if all tasks in PR are completed
   task-check:
