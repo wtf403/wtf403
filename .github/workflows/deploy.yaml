@@ -2,7 +2,9 @@ name: deploy.yaml
 
 on:
   pull_request:
-    types: [opened, reopened, edited]
+    types: [opened, edited, synchronize]
+    paths:
+      - 'articles/**.md'
     branches:
       - main
 

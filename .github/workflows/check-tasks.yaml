@@ -1,36 +1,76 @@
-name: check-tasks.yaml
+name: check-frontmatter-links
 
 on:
   workflow_call:
-  pull_request:
-    types: [create, edited, opened]
-  issue_comment:
-    types: [created, edited]
-
+  workflow_dispatch:
 
 jobs:
-  task-check:
-    name: Check PR Tasks
+  check-links:
+    name: Check Front Matter Links
     runs-on: ubuntu-latest
     steps:
-      - uses: venkatsarvesh/pr-tasks-completed-action@v1.0.0
+      - uses: actions/checkout@v4
         with:
-          repo-token: "${{ secrets.GITHUB_TOKEN }}"
+          fetch-depth: 2
 
-  require-tasks:
-    name: Require Tasks
-    needs: [task-check]
-    if: failure() && needs.task-check.result == 'failure'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Require Tasks
+      - name: Check Front Matter Links
         uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '⚠️ Please complete all required tasks in the PR description before deployment can proceed'
-            })
+            const fs = require('fs');
+            const { execSync } = require('child_process');
+
+            // Get changed files
+            const diffOutput = execSync('git diff --name-only HEAD^').toString();
+            const changedFiles = diffOutput.split('\n').filter(file => file.endsWith('.md'));
+
+            let hasErrors = false;
+
+            for (const file of changedFiles) {
+              const content = fs.readFileSync(file, 'utf8');
+              const lines = content.split('\n');
+
+              // Check if article content was modified (excluding front matter)
+              const contentStart = lines.findIndex((line, index) =>
+                index > 0 && line.trim() === '---'
+              );
+
+              const oldContent = execSync(`git show HEAD^:${file}`).toString();
+              const oldLines = oldContent.split('\n');
+              const oldContentStart = oldLines.findIndex((line, index) =>
+                index > 0 && line.trim() === '---'
+              );
+
+              // If content changed, verify front matter links
+              if (lines.slice(contentStart + 1).join('\n') !== oldLines.slice(oldContentStart + 1).join('\n')) {
+                const requiredLinks = {
+                  'mirror': 'https://mirror.xyz/',
+                  'paragraph': 'https://paragraph.xyz/',
+                  'medium': 'https://medium.com/'
+                };
+
+                let frontMatter = lines.slice(0, contentStart);
+                let missingLinks = [];
+
+                for (const [platform, url] of Object.entries(requiredLinks)) {
+                  if (!frontMatter.some(line => line.trim().startsWith(`${platform}:`) && line.includes(url))) {
+                    missingLinks.push(`${platform}: ${url}`);
+                  }
+                }
+
+                if (missingLinks.length > 0) {
+                  hasErrors = true;
+                  await github.rest.issues.createComment({
+                    issue_number: context.issue.number,
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    body: `⚠️ Article content was modified but the following front matter links are missing or incorrect in ${file}:\n\n${missingLinks.join('\n')}`
+                  });
+                }
+              }
+            }
+
+            if (hasErrors) {
+              process.exit(1);
+            }
