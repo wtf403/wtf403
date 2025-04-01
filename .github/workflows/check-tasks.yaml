@@ -1,0 +1,115 @@
+name: check-frontmatter-links
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  check-links:
+    name: Check Front Matter Links
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check Front Matter Links
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const { execSync } = require('child_process');
+
+            // Get all changed files in articles directory
+            const diffOutput = execSync('git diff --name-status HEAD^').toString();
+            const changedFiles = diffOutput
+              .split('\n')
+              .filter(line => line.trim())
+              .map(line => {
+                const [status, file] = line.split(/\s+/);
+                return { status, file };
+              })
+              .filter(({ file }) => file && file.startsWith('articles/') && file.endsWith('.md'));
+
+            let hasErrors = false;
+
+            for (const { status, file } of changedFiles) {
+              // Skip deleted files
+              if (status === 'D') continue;
+
+              try {
+                const content = fs.readFileSync(file, 'utf8');
+                const lines = content.split('\n');
+
+                const contentStart = lines.findIndex((line, index) =>
+                  index > 0 && line.trim() === '---'
+                );
+
+                if (contentStart === -1) {
+                  console.warn(`Invalid front matter format in ${file} - missing closing '---'. Skipping file.`);
+                  continue; // Skip checks for this file
+                }
+
+                let oldContent = '';
+                let oldLines = [];
+                let oldContentStart = -1;
+                try {
+                  oldContent = execSync(`git show HEAD^:${file}`).toString();
+                  oldLines = oldContent.split('\n');
+                  oldContentStart = oldLines.findIndex((line, index) => index > 0 && line.trim() === '---');
+                } catch (e) {
+                  // File is new, oldBody will be null
+                }
+
+                const currentBody = lines.slice(contentStart + 1).join('\n');
+                const oldBody = oldContentStart !== -1 ? oldLines.slice(oldContentStart + 1).join('\n') : null;
+
+                const contentChanged = oldBody === null || currentBody !== oldBody;
+
+                // If article body content changed, check if links were updated
+                if (contentChanged) {
+                  const requiredPlatforms = ['mirror', 'paragraph', 'medium'];
+                  const currentFrontMatterLines = lines.slice(1, contentStart); // Exclude first '---'
+                  const oldFrontMatterLines = oldContentStart !== -1 ? oldLines.slice(1, oldContentStart) : [];
+
+                  const findLinkLine = (fmLines, platform) =>
+                    fmLines.find(line => line.trim().startsWith(`${platform}:`));
+
+                  let linksNotUpdated = [];
+
+                  for (const platform of requiredPlatforms) {
+                    const currentLine = findLinkLine(currentFrontMatterLines, platform);
+                    const oldLine = findLinkLine(oldFrontMatterLines, platform);
+
+                    // If the link exists in the new version or existed in the old version,
+                    // check if the line itself is identical (meaning it wasn't updated)
+                    if ((currentLine !== undefined || oldLine !== undefined) && currentLine === oldLine) {
+                      linksNotUpdated.push(platform);
+                    }
+                  }
+
+                  if (linksNotUpdated.length > 0) {
+                    hasErrors = true;
+                    // Check if context.issue.number is available (it might not be on workflow_dispatch)
+                    if (context.issue && context.issue.number) {
+                      await github.rest.issues.createComment({
+                        issue_number: context.issue.number,
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        body: `⚠️ Article content was modified in \`${file}\`, but the following front matter links were not updated in this commit:\n\n${linksNotUpdated.map(p => `- \`${p}\``).join('\n')}\n\nPlease ensure links are updated when article content changes.`
+                      });
+                    } else {
+                      console.error(`⚠️ Article content modified in ${file}, but links not updated: ${linksNotUpdated.join(', ')}. Cannot comment without PR context.`);
+                    }
+                  }
+                }
+              } catch (error) {
+                console.error(`Error processing ${file}:`, error);
+                hasErrors = true;
+              }
+            }
+
+            if (hasErrors) {
+              core.setFailed('One or more articles had content changes without corresponding front matter link updates.');
+            }
