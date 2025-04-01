@@ -17,7 +17,7 @@ jobs:
   # Check if all tasks in PR are completed
   task-check:
     name: Check PR Tasks
-    runs-on: ubuntu-latest
+    needs: [link-checker]
     uses: ./.github/workflows/check-tasks.yaml
     secrets: inherit
 
@@ -41,7 +41,6 @@ jobs:
   deploy-gh-pages:
     name: Deploy to GitHub Pages
     needs: [link-checker]
-    if: needs.require-tasks.outputs.tasks-completed == 'true'
     uses: ./.github/workflows/gh-pages.yaml
     secrets: inherit
 
@@ -49,6 +48,5 @@ jobs:
   deploy-ipfs:
     name: Deploy to IPFS
     needs: [link-checker]
-    if: needs.require-tasks.outputs.tasks-completed == 'true'
     uses: ./.github/workflows/ipfs.yaml
     secrets: inherit
