@@ -9,6 +9,10 @@ permissions:
   pages: write
   id-token: write
   statuses: write
+<<<<<<< HEAD
+=======
+  pull-requests: write
+>>>>>>> c21b854 (ipfs deploy)
 
 jobs:
   build-and-deploy:

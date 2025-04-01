@@ -2,10 +2,9 @@ name: deploy.yaml
 
 on:
   pull_request:
-    types: [opened, reopened, synchronize]
-    branches:
-      - main
-  push:
+    types: [opened, edited, synchronize]
+    paths:
+      - 'articles/**.md'
     branches:
       - main
 
@@ -17,35 +16,40 @@ permissions:
   statuses: write
 
 jobs:
-  # # Check if all tasks in PR are completed
-  # task-check:
-  #   name: Check PR Tasks
-  #   runs-on: ubuntu-latest
-  #   outputs:
-  #     tasks-completed: ${{ steps.check-tasks.outputs.isCompleted }}
-  #   steps:
-  #     - name: Check if all tasks are completed
-  #       id: check-tasks
-  #       uses: kentaro-m/task-completed-checker-action@v0.1.2
-  #       with:
-  #         repo-token: "${{ secrets.GITHUB_TOKEN }}"
-
-  # Check for broken links in markdown files
-  link-checker:
-    name: Check Links
+  # Check if all tasks in PR are completed
+  task-check:
+    name: Check PR Tasks
+<<<<<<< HEAD
+<<<<<<< HEAD
     runs-on: ubuntu-latest
+<<<<<<< HEAD
+    if: github.event.action != 'edited' || github.event.changes.body
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Check links
-        uses: lycheeverse/lychee-action@v2
+      - uses: venkatsarvesh/pr-tasks-completed-action@v1.0.0
         with:
-          args: --max-concurrency 1 -v articles/*.md
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          repo-token: "${{ secrets.GITHUB_TOKEN }}"
+
 
   # Comment on PR if tasks are not completed
+<<<<<<< HEAD
+  require-tasks:
+    name: Require Tasks
+    needs: [task-check]
+    if: failure() && needs.task-check.result == 'failure'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require Tasks
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '⚠️ Please complete all required tasks in the PR description before deployment can proceed'
+            })
+=======
   # require-tasks:
   #   name: Require Tasks
   #   needs: [task-check]
@@ -63,12 +67,37 @@ jobs:
   #             repo: context.repo.repo,
   #             body: '⚠️ Please complete all required tasks in the PR description before deployment can proceed:\n\n```\nUpdate article:\n- [ ] mirror.xyz\n- [ ] paragraph.xyz [ ] medium.com\n```'
   #           })
+>>>>>>> d697123 (ipfs deploy)
+=======
+=======
+    needs: [link-checker]
+>>>>>>> e07de7a (fix action)
+=======
+>>>>>>> 4a89c01 (fix gh-action)
+    uses: ./.github/workflows/check-tasks.yaml
+    secrets: inherit
+>>>>>>> f1282e9 (fix action)
+
+  # Check for broken links in markdown files
+  link-checker:
+    name: Check Links
+    needs: [task-check]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check links
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: --max-concurrency 1 -v articles/*.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # Deploy to GitHub Pages if all tasks are completed
   deploy-gh-pages:
     name: Deploy to GitHub Pages
     needs: [link-checker]
-    # if: needs.require-tasks.outputs.tasks-completed == 'true'
     uses: ./.github/workflows/gh-pages.yaml
     secrets: inherit
 
@@ -76,6 +105,5 @@ jobs:
   deploy-ipfs:
     name: Deploy to IPFS
     needs: [link-checker]
-    # if: needs.require-tasks.outputs.tasks-completed == 'true'
     uses: ./.github/workflows/ipfs.yaml
     secrets: inherit
