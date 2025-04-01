@@ -1,6 +1,7 @@
 name: deploy.yaml
 
 on:
+  workflow_dispatch:
   pull_request:
     types: [opened, edited, synchronize]
     paths:
@@ -25,13 +26,13 @@ jobs:
   # Deploy to GitHub Pages if all tasks are completed
   deploy-gh-pages:
     name: Deploy to GitHub Pages
-    needs: [link-checker]
+    needs: [check-links]
     uses: ./.github/workflows/gh-pages.yaml
     secrets: inherit
 
   # Deploy to IPFS if all tasks are completed
   deploy-ipfs:
     name: Deploy to IPFS
-    needs: [link-checker]
+    needs: [check-links]
     uses: ./.github/workflows/ipfs.yaml
     secrets: inherit

@@ -12,6 +12,6 @@ Test article bla bla bla
 
 ## Title
 
-![standards](/media/how-standartds-proliferate.png)
+![standards](/media/how-standartds-proliferate.png)fs[]
 
 [Sample link](https://kmcd.dev/posts/working-with-protobuf-in-2024/)

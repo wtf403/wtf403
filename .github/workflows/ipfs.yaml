@@ -1,4 +1,4 @@
-name: wtf403.eth
+name: ipfs.yaml
 
 on:
   workflow_call:
@@ -11,15 +11,15 @@ permissions:
   statuses: write
   pull-requests: write
 
-  jobs:
-    build-and-deploy:
-      runs-on: ubuntu-latest
-      steps:
-        - name: Checkout code
-          uses: actions/checkout@v4
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-        - name: Setup Node.js
-          uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
