@@ -13,6 +13,13 @@ jobs:
         with:
           fetch-depth: 2
 
+      - name: Check links
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: --max-concurrency 1 -v articles/*.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Check Front Matter Links
         uses: actions/github-script@v6
         with:
