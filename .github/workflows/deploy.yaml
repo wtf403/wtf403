@@ -17,7 +17,6 @@ jobs:
   # Check if all tasks in PR are completed
   task-check:
     name: Check PR Tasks
-    needs: [link-checker]
     uses: ./.github/workflows/check-tasks.yaml
     secrets: inherit
 
