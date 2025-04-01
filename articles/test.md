@@ -8,7 +8,7 @@ medium: https://medium.com/
 ---
 # About test
 
-Test bla bla bla
+Test article
 
 ## Title
 
