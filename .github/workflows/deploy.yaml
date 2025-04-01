@@ -13,37 +13,21 @@ permissions:
   pull-requests: write
   statuses: write
 
-
 jobs:
   # Check if all tasks in PR are completed
   task-check:
     name: Check PR Tasks
     runs-on: ubuntu-latest
-    outputs:
-      tasks-completed: ${{ steps.check-tasks.outputs.result }}
     steps:
-      - name: Check PR Tasks
-        id: check-tasks
-        uses: actions/github-script@v6
+      - uses: venkatsarvesh/pr-tasks-completed-action@v1.0.0
         with:
-          script: |
-            const { data: pr } = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.issue.number
-            });
-
-            const body = pr.body || '';
-            const incompleteTaskPattern = /\s*[-*]\s*\[\s*]\s/;
-            const hasIncompleteTasks = incompleteTaskPattern.test(body);
-
-            return (!hasIncompleteTasks).toString();
+          repo-token: "${{ secrets.GITHUB_TOKEN }}"
 
   # Comment on PR if tasks are not completed
   require-tasks:
     name: Require Tasks
     needs: [task-check]
-    if: needs.task-check.outputs.tasks-completed == 'false'
+    if: failure() && needs.task-check.result == 'failure'
     runs-on: ubuntu-latest
     steps:
       - name: Require Tasks
@@ -55,7 +39,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '⚠️ Please complete all required tasks in the PR description'
+              body: '⚠️ Please complete all required tasks in the PR description before deployment can proceed:\n\n```\nUpdate article:\n- [ ] mirror.xyz\n- [ ] paragraph.xyz [ ] medium.com\n```'
             })
 
   # Check for broken links in markdown files
